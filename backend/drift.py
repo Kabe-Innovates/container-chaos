@@ -1,22 +1,27 @@
 import csv
 import os
+import sys
 import pandas as pd
 from datetime import datetime
 from sklearn.ensemble import IsolationForest
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
+
 # --- STARTUP: TRAIN THE DYNAMIC DETECTOR ---
 print("🌲 Booting Dynamic Drift Detector (Isolation Forest)...")
 drift_detector = None
-features = ['discount_percent', 'discounted_price', 'price', 'quantity_sold', 'rating', 'review_count']
+features = Config.get_features()
 
 try:
     # 1. Read the baseline data you trained Model V1 on
-    baseline_df = pd.read_csv('data/raw.csv')
+    baseline_path = Config.get_raw_data_path()
+    baseline_df = pd.read_csv(baseline_path)
     X_baseline = baseline_df[features].fillna(0)
     
     # 2. Train the Forest to recognize "normal" data
-    # contamination=0.01 means we assume 1% of our training data might be natural outliers
-    drift_detector = IsolationForest(random_state=42, contamination=0.01)
+    # contamination rate is configurable; default assumes 1% of training data might be natural outliers
+    drift_detector = IsolationForest(random_state=Config.get_random_state(), contamination=Config.get_contamination_rate())
     drift_detector.fit(X_baseline)
     print("✅ Dynamic Drift Detector Armed and Ready.")
 except Exception as e:
@@ -52,9 +57,11 @@ def check_and_log_drift(data_dict):
 
     # 3. LOGGING
     if is_drift:
-        os.makedirs('data', exist_ok=True)
-        file_exists = os.path.isfile('data/drift_log.csv')
-        with open('data/drift_log.csv', 'a', newline='') as f:
+        drift_log_path = Config.get_drift_log_path()
+        data_dir = os.path.dirname(drift_log_path)
+        os.makedirs(data_dir, exist_ok=True)
+        file_exists = os.path.isfile(drift_log_path)
+        with open(drift_log_path, 'a', newline='') as f:
             row = {'timestamp': datetime.now().isoformat()}
             row.update(data_dict)
             writer = csv.DictWriter(f, fieldnames=row.keys())

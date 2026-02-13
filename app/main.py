@@ -3,12 +3,17 @@ from pydantic import BaseModel
 import pandas as pd
 import joblib
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
 
 app = FastAPI(title="Amazon Revenue Predictor")
 
 # Load model and feature list from the mounted volume
-MODEL_PATH = "models/model_v1.pkl"
-FEATURES_PATH = "models/features.pkl"
+Config.ensure_dirs_exist()
+MODEL_PATH = Config.get_model_path()
+FEATURES_PATH = Config.get_features_path()
 
 try:
     model = joblib.load(MODEL_PATH)

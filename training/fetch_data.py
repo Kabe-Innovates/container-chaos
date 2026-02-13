@@ -1,10 +1,14 @@
 import pandas as pd
 import requests
 import os
+import sys
 from io import StringIO
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
+
 # Ensure data directory exists
-os.makedirs('../data', exist_ok=True)
+Config.ensure_dirs_exist()
 
 url = "https://container-chaos-b2c6bde72854.herokuapp.com/api/amazon/train-test"
 print(f"📡 Fetching data from {url}...")
@@ -28,9 +32,10 @@ if response.status_code == 200:
         df = pd.read_csv(StringIO(response.text))
     
     # Save the raw data
-    df.to_csv('../data/raw.csv', index=False)
+    raw_path = Config.get_raw_data_path()
+    df.to_csv(raw_path, index=False)
     
-    print("✅ Data successfully saved to ../data/raw.csv")
+    print(f"✅ Data successfully saved to {raw_path}")
     print("\n" + "="*30)
     print("🚨 CRITICAL: DATA TYPES DETECTED")
     print("="*30)

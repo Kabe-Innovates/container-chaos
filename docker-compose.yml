@@ -2,20 +2,39 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
     volumes:
       - ./models:/app/models
       - ./data:/app/data
     restart: always
+    environment:
+      - API_HOST=${API_HOST:-0.0.0.0}
+      - API_PORT=${API_PORT:-8000}
+      - MODELS_DIR=${MODELS_DIR:-models}
+      - DATA_DIR=${DATA_DIR:-data}
+      - MODEL_NAME=${MODEL_NAME:-model_v1.pkl}
+      - FEATURES_NAME=${FEATURES_NAME:-features.pkl}
+      - RAW_DATA_FILE=${RAW_DATA_FILE:-raw.csv}
+      - DRIFT_LOG_FILE=${DRIFT_LOG_FILE:-drift_log.csv}
+      - RANDOM_STATE=${RANDOM_STATE:-42}
+      - CONTAMINATION_RATE=${CONTAMINATION_RATE:-0.01}
+      - TEST_SIZE=${TEST_SIZE:-0.2}
+      - N_ESTIMATORS=${N_ESTIMATORS:-50}
+      - FEATURES=${FEATURES:-discount_percent,discounted_price,price,quantity_sold,rating,review_count}
+      - TARGET_COLUMN=${TARGET_COLUMN:-total_revenue}
   
   prometheus:
     image: prom/prometheus
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:${PROMETHEUS_PORT:-9090}"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    environment:
+      - PROMETHEUS_PORT=${PROMETHEUS_PORT:-9090}
   
   grafana:
     image: grafana/grafana
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:${GRAFANA_PORT:-3000}"
+    environment:
+      - GRAFANA_PORT=${GRAFANA_PORT:-3000}

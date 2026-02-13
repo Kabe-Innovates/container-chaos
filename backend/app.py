@@ -1,11 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd, joblib
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
 from backend.drift import check_and_log_drift
 
 app = FastAPI()
-model = joblib.load("models/model_v1.pkl")
-feature_cols = joblib.load("models/features.pkl")
+Config.ensure_dirs_exist()
+model = joblib.load(Config.get_model_path())
+feature_cols = joblib.load(Config.get_features_path())
 
 class PredictRequest(BaseModel):
     discount_percent: float
