@@ -1,7 +1,6 @@
-cat << 'EOF' > README.md
 # Amazon Revenue Predictor (Container Chaos)
 
-A resilient, containerized machine learning API built to predict Amazon product revenue and dynamically detect data drift in production.
+> A resilient, containerized machine learning API built to predict Amazon product revenue and dynamically detect data drift in production.
 
 ## The Endpoint (For Judges)
 
