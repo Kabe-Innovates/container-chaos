@@ -1,6 +1,3 @@
-#!/bin/bash
-# Entry point for Docker container to handle environment-based configuration
-
 import os
 import sys
 
