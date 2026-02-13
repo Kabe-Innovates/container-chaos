@@ -9,21 +9,16 @@ import sys
 # Load Config
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import Config
+from backend.drift import check_and_log_drift, log_audit_data
 
-# Load Drift and Metrics
-from backend.drift import check_and_log_drift
-from backend.metrics import PREDICTION_COUNT, DRIFT_COUNT, get_metrics
-
-app = FastAPI(title="Amazon Revenue Predictor - Enterprise Edition")
+app = FastAPI(title="Amazon Revenue Predictor - Model V2")
 
 # Ensure directories exist and load model via Config
 Config.ensure_dirs_exist()
 try:
     model = joblib.load(Config.get_model_path())
     feature_cols = joblib.load(Config.get_features_path())
-    print("✅ Model loaded successfully via Config.")
 except Exception as e:
-    print(f"⚠️ Warning: Model not loaded. Error: {e}")
     model = None
 
 class PredictRequest(BaseModel):
@@ -35,40 +30,34 @@ class PredictRequest(BaseModel):
     review_count: int
 
 @app.post("/predict")
+@app.post("/predict/")
 def predict(request: Union[PredictRequest, List[PredictRequest]]):
     if model is None:
-        raise HTTPException(status_code=500, detail="Model is missing!")
+        raise HTTPException(status_code=500, detail="Model file missing")
 
-    # 1. Normalize input to a list so we can process batches easily
+    # Normalize input for batch processing
     is_batch = isinstance(request, list)
     requests_list = request if is_batch else [request]
     req_dicts = [req.dict() for req in requests_list]
     
-    # 2. Update Metrics & Check Drift for every item in the batch
-    PREDICTION_COUNT.inc(len(req_dicts))
+    # Background Logging & Drift Detection
     for req_dict in req_dicts:
-        # --- PHASE 3: THE DRIFT TRAP ---
-        if check_and_log_drift(req_dict):
-            DRIFT_COUNT.inc()
+        log_audit_data(req_dict)
+        check_and_log_drift(req_dict)
             
     try:
-        # 3. Batch Predict (Blazing fast in Pandas/Sklearn)
+        # Inference using updated model_v2 features
         df = pd.DataFrame(req_dicts)[feature_cols]
         preds = model.predict(df)
         
-        # 4. Format Output
+        # Format strictly as JSON results
         results = [{"total_revenue": round(float(p), 2)} for p in preds]
-        
-        # Return a list if they sent a list, or a single dict if they sent a single dict
         return results if is_batch else results[0]
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/metrics")
-def metrics():
-    return get_metrics()
+    except Exception:
+        # Generic error to avoid leaking system info in HTML
+        raise HTTPException(status_code=500, detail="Internal Prediction Error")
 
 @app.get("/health")
 def health():
-    return {"status": "alive", "model_loaded": model is not None}
+    return {"status": "alive", "model": os.getenv('MODEL_NAME')}
