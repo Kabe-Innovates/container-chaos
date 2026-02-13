@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
+models/features.pkl
+models/model_v1.pklmodels/*.pkl
+models/*.pkl
